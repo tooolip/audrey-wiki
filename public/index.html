@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>audrey.wiki</title>
+	<link rel="stylesheet" href="/app.css">
+	<link rel="icon" href="/favicon.svg">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.0/lib/marked.umd.min.js" integrity="sha384-3oYgyohyKGID0Mjf4sv9mBRVGZQ7v30l8A1LknUrjwfSYZNT8rPZlBIuyXJWU2Xs" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="/app.js" defer></script>
+</head>
+<body>
+	<div class="app">
+		<aside id="sidebar" class="sidebar">
+			<header class="sidebar-head">
+				<a href="#/" class="brand">audrey.wiki</a>
+				<span class="actions">
+					<button id="new-note" class="icon" title="New note" aria-label="New note">
+						<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2.5h6.5L15.5 6.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z"/><path d="M10 9v6M7 12h6"/></svg>
+					</button>
+					<button id="new-folder" class="icon" title="New folder" aria-label="New folder">
+						<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5a1 1 0 0 1 1-1h4l1.5 2h7.5a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1Z"/><path d="M10 9v5M7.5 11.5h5"/></svg>
+					</button>
+				</span>
+			</header>
+			<input id="search" class="search" type="search" placeholder="Search" autocomplete="off" spellcheck="false">
+			<nav id="tree" class="tree" aria-label="Notes"></nav>
+			<ul id="results" class="results" hidden></ul>
+		</aside>
+
+		<main id="main" class="main">
+			<header class="note-head">
+				<button id="toggle-sidebar" class="icon only-narrow" title="Notes" aria-label="Show notes">
+					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+				</button>
+				<div class="crumbs" id="crumbs"></div>
+				<span id="status" class="status" aria-live="polite"></span>
+				<div class="segmented" role="group" aria-label="View">
+					<button id="mode-edit" aria-pressed="true">Edit</button>
+					<button id="mode-read" aria-pressed="false">Read</button>
+				</div>
+				<button id="rename" class="icon" title="Rename or move" aria-label="Rename or move">
+					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3Z"/></svg>
+				</button>
+				<button id="delete" class="icon danger" title="Delete note" aria-label="Delete note">
+					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M5.5 6l1 10.5h7l1-10.5"/></svg>
+				</button>
+			</header>
+
+			<div id="conflict" class="banner" hidden>
+				<span>This note changed somewhere else while you were editing.</span>
+				<button id="conflict-reload">Load theirs</button>
+				<button id="conflict-keep" class="secondary">Keep mine</button>
+			</div>
+
+			<input id="title" class="title" spellcheck="false" aria-label="Note name">
+			<textarea id="editor" class="editor" spellcheck="true" placeholder="Start writing…"></textarea>
+			<article id="preview" class="preview" hidden></article>
+
+			<section id="empty" class="empty" hidden>
+				<h1>Nothing open</h1>
+				<p>Pick a note on the left, or make a new one.</p>
+				<button id="empty-new" class="primary">New note</button>
+			</section>
+		</main>
+	</div>
+</body>
+</html>
