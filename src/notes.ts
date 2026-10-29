@@ -250,10 +250,13 @@ export async function remove(env: Env, args: { path: string; recursive?: boolean
 	return { deleted_notes: (isNote ? 1 : 0) + contents, deleted_folders: isFolder ? 1 + subfolders : 0 };
 }
 
-// Every word has to appear somewhere in the note's path or text. Returns the
-// matching lines so a caller can tell which notes are worth reading in full.
+// Every word (or "quoted phrase") has to appear somewhere in the note's path or
+// text. Returns the matching lines so a caller can tell which notes are worth
+// reading in full.
 export async function search(env: Env, args: { query: string; folder?: string; limit?: number }) {
-	const words = args.query.toLowerCase().split(/\s+/).filter(Boolean);
+	const words = [...args.query.toLowerCase().matchAll(/"([^"]+)"|(\S+)/g)]
+		.map((m) => m[1] ?? m[2])
+		.filter(Boolean);
 	if (!words.length) throw new UserError("Search query is empty.");
 	const folder = args.folder ? normalizePath(args.folder) : "";
 	const conditions = words.map(() => "(instr(lower(content), ?) > 0 OR instr(lower(path), ?) > 0)");

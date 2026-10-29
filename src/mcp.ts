@@ -108,6 +108,7 @@ export function createServer(env: Env) {
 		{
 			description:
 				"Find notes where every word of the query appears in the path or text (case-insensitive). " +
+				'Put "exact phrases" in double quotes, like "- [ ]" for open todos. ' +
 				"Returns paths, newest first, with up to 5 matching lines each.",
 			inputSchema: z.object({
 				query: z.string(),
