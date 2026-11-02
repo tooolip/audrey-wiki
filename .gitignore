@@ -11,3 +11,5 @@ dist/
 
 # Private deployment configuration
 deployment.config.json
+
+node_modules
