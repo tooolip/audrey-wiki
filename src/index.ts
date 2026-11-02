@@ -5,7 +5,7 @@ import { ownerEmail } from "./auth";
 import { authorize } from "./authorize";
 import { createServer } from "./mcp";
 
-const ORIGIN = import.meta.env.DEV ? "http://localhost:5173" : "https://notes.example.com";
+const ORIGIN = import.meta.env.DEV ? "http://localhost:5173" : import.meta.env.VITE_SITE_ORIGIN;
 
 // Everything a person reaches is behind Cloudflare Access: the web page (public/,
 // served as static assets), /api/* and /authorize. Access lets MCP clients

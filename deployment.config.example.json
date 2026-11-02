@@ -1,0 +1,10 @@
+{
+  "accountId": "00000000000000000000000000000000",
+  "databaseId": "00000000-0000-4000-8000-000000000000",
+  "kvId": "00000000000000000000000000000000",
+  "siteOrigin": "http://localhost:5173",
+  "domains": [],
+  "accessTeamDomain": "https://access.example.com",
+  "accessAud": "0000000000000000000000000000000000000000000000000000000000000000",
+  "ownerEmail": "owner@example.com"
+}

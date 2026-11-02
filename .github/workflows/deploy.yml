@@ -22,8 +22,15 @@ jobs:
         with:
           bun-version: 1.4.0
       - run: bun install --frozen-lockfile
+      - name: Restore private deployment configuration
+        env:
+          DEPLOYMENT_CONFIG_JSON: ${{ secrets.DEPLOYMENT_CONFIG_JSON }}
+        run: |
+          test -n "$DEPLOYMENT_CONFIG_JSON"
+          printf '%s' "$DEPLOYMENT_CONFIG_JSON" > deployment.config.json
+          node -e 'const mask=v=>{if(typeof v==="string") console.log("::add-mask::"+v); else if(v&&typeof v==="object") Object.values(v).forEach(mask)}; mask(require("./deployment.config.json"))'
       - run: bun run typecheck
       - name: Apply D1 migrations
-        run: bunx cf d1 migrations apply 00000000-0000-4000-8000-000000000000
+        run: bunx cf d1 migrations apply "$(node -p 'require("./deployment.config.json").databaseId')"
       - name: Deploy Worker
         run: bunx cf deploy

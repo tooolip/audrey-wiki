@@ -52,7 +52,7 @@ export function createServer(env: Env) {
 		{
 			instructions:
 				"Private notes: folders of markdown notes, addressed by path like \"Projects/Wiki ideas\" (no .md). " +
-				"She edits them in a browser at https://notes.example.com too. " +
+				"They can also be edited in the browser. " +
 				"To find things, use search or list rather than reading notes one by one. " +
 				"To change part of a note, use edit with the exact text to swap instead of rewriting the whole note. " +
 				"Notes can link to each other with [[Note name]] or [[Folder/Note name]].",
