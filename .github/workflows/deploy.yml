@@ -31,6 +31,16 @@ jobs:
           node -e 'const mask=v=>{if(typeof v==="string") console.log("::add-mask::"+v); else if(v&&typeof v==="object") Object.values(v).forEach(mask)}; mask(require("./deployment.config.json"))'
       - run: bun run typecheck
       - name: Apply D1 migrations
-        run: bunx cf d1 migrations apply "$(node -p 'require("./deployment.config.json").databaseId')"
+        run: |
+          if ! bunx cf d1 migrations apply "$(node -p 'require("./deployment.config.json").databaseId')" > "$RUNNER_TEMP/provider-migration.log" 2>&1; then
+            echo "::error::Cloudflare migration failed. Check the Cloudflare dashboard for details."
+            exit 1
+          fi
+          echo "Cloudflare migration succeeded."
       - name: Deploy Worker
-        run: bunx cf deploy
+        run: |
+          if ! bunx cf deploy > "$RUNNER_TEMP/provider-deployment.log" 2>&1; then
+            echo "::error::Cloudflare deployment failed. Check the Cloudflare dashboard for details."
+            exit 1
+          fi
+          echo "Cloudflare deployment succeeded."
