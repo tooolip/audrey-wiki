@@ -38,6 +38,7 @@ bun run build
 2. Configure Cloudflare Access to protect the site, `/api/*`, and `/authorize`. Allow only the intended owner.
 3. Create an Access bypass policy for `/mcp`, `/oauth/*`, and `/.well-known/*`. Those endpoints use the application's OAuth flow.
 4. Set `siteOrigin` and `domains` to the same deployment origin. Keep `workersDev` and preview URLs disabled unless their access protection is configured too.
+   Set `landingDomains` to the hostnames for the public landing page in `landing/`, or leave it empty to skip it.
 5. Apply the D1 migrations and deploy:
 
 ```sh
@@ -61,6 +62,7 @@ Use `https://YOUR_DOMAIN/mcp` as the server URL. The client registers through OA
 | `src/auth.ts`, `src/authorize.ts` | Owner verification and OAuth consent |
 | `public/` | Plain HTML, CSS, and JavaScript interface |
 | `migrations/` | Numbered D1 schema changes |
+| `landing/` | Separate public landing page Worker; deploy with `cd landing && bunx cf deploy` |
 | `deployment.config.example.json` | Safe starting configuration |
 
 Markdown rendering uses DOMPurify and the site's Content Security Policy. Preserve those protections when adding features.

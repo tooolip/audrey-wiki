@@ -44,3 +44,13 @@ jobs:
             exit 1
           fi
           echo "Cloudflare deployment succeeded."
+      # Runs after the notes Worker so that a domain moving from it to the
+      # landing page has already been released.
+      - name: Deploy landing page
+        working-directory: landing
+        run: |
+          if ! bunx cf deploy > "$RUNNER_TEMP/provider-landing-deployment.log" 2>&1; then
+            echo "::error::Cloudflare landing deployment failed. Check the Cloudflare dashboard for details."
+            exit 1
+          fi
+          echo "Cloudflare landing deployment succeeded."

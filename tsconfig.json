@@ -12,5 +12,5 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true
 	},
-	"include": ["src", "cloudflare.config.ts", ".cloudflare/types"]
+	"include": ["src", "cloudflare.config.ts", "landing/src", "landing/cloudflare.config.ts", ".cloudflare/types"]
 }
