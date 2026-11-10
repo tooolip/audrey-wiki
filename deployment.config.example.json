@@ -4,6 +4,7 @@
   "kvId": "00000000000000000000000000000000",
   "siteOrigin": "http://localhost:5173",
   "domains": [],
+  "landingDomains": [],
   "accessTeamDomain": "https://access.example.com",
   "accessAud": "0000000000000000000000000000000000000000000000000000000000000000",
   "ownerEmail": "owner@example.com"
