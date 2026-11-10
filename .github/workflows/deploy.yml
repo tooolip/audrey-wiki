@@ -49,6 +49,10 @@ jobs:
       - name: Deploy landing page
         working-directory: landing
         run: |
+          if [ "$(node -p '(require("../deployment.config.json").landingDomains ?? []).length')" = "0" ]; then
+            echo "No landingDomains configured; skipping landing page."
+            exit 0
+          fi
           if ! bunx cf deploy > "$RUNNER_TEMP/provider-landing-deployment.log" 2>&1; then
             echo "::error::Cloudflare landing deployment failed. Check the Cloudflare dashboard for details."
             exit 1

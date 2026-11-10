@@ -10,7 +10,7 @@ export default defineConfig({
 		name: "audrey-wiki-landing",
 		compatibilityDate: "2026-10-23",
 		entrypoint,
-		domains: deployment.landingDomains,
+		domains: deployment.landingDomains ?? [],
 		workersDev: false,
 		previewUrls: false,
 		observability: { enabled: true },
