@@ -5,7 +5,7 @@ description: Set up a new project as its own repo, hosted on a subdomain of audr
 
 # New subdomain project
 
-Each idea gets its own GitHub repo and its own `<name>.audrey.wiki` subdomain. `audrey.wiki` itself is a public landing page (`landing/` in this repo). `monitor.audrey.wiki` (repo `tooolip/monitor`) checks every subdomain twice a day.
+Each idea gets its own GitHub repo and its own `<name>.audrey.wiki` subdomain. `audrey.wiki` itself is a landing page listing every site (`landing/` in this repo), behind Access like everything else. `monitor.audrey.wiki` (repo `tooolip/monitor`) checks every subdomain twice a day.
 
 This skill takes an empty repo to a deployed, monitored subdomain.
 
@@ -15,7 +15,7 @@ Confirm these, and ask only for what's missing:
 
 1. **Name.** The subdomain label: lowercase letters, numbers and hyphens. Check that it isn't already taken (see step 1).
 2. **Repo.** Audrey creates an empty repo on GitHub. Claude can't create repos from a cloud session. Attach it to the session with `add_repo`, along with `tooolip/monitor` if it isn't attached already.
-3. **Public or private.** Private means behind Cloudflare Access, so only Audrey can get in. Default to private for anything holding personal data.
+3. **Access.** Every site goes behind Cloudflare Access so only Audrey can get in. Only make one public if Audrey asks for it by name.
 4. **What it does,** in a sentence or two. This shapes the scaffold: a static page, a Worker with an API, or one that needs D1 or KV.
 5. **Cloudflare access.** The `audrey.wiki` cloud environment holds a Cloudflare API token for `api.cloudflare.com`. If calls return 401 or 403, the session is on a different environment, or the token is missing a permission. Say which one and stop.
 
@@ -44,7 +44,7 @@ Copy the patterns from this repo instead of inventing new ones. `landing/` is th
 - **`public/_headers`:** a strict CSP that starts from `default-src 'none'` or `'self'`, plus `nosniff` and `no-referrer`. Only loosen it for something the app actually needs.
 - **Private apps:** copy `src/auth.ts`, which checks the Access JWT and the owner email inside the Worker. Access alone isn't enough.
 - **`.github/workflows/deploy.yml`:** copy this repo's workflow. It restores the config from the `DEPLOYMENT_CONFIG_JSON` secret, typechecks, applies migrations if there are any, and deploys.
-- **`CLAUDE.md`:** a few lines covering where logic lives and which security checks to keep, adapted from this repo's file.
+- **`CLAUDE.md`:** a `# <repo>` heading, one line saying what it is and where it's hosted, a `## This project` section (where logic lives, which checks to keep, how it deploys), then `CLAUDE.shared.md` from this skill's folder pasted in word for word.
 - **`README.md`:** what the project is, how to run it locally, and how to deploy it.
 - Copy `.claude/skills/frontend-design/` into the new repo if it has any UI, and follow it.
 
@@ -54,7 +54,7 @@ Run `bun run typecheck` and `bun run build` before committing.
 
 Each of these changes live infrastructure, so tell Audrey what you're about to do and get a yes first.
 
-1. **Private projects:** create an Access self-hosted application for `<name>.audrey.wiki`. Copy the allow policy (the include rule) from the existing `audrey.wiki` Access app rather than typing the email. Put the new app's AUD tag in the private config.
+1. **Access:** create an Access self-hosted application for `<name>.audrey.wiki`. Copy the allow policy (the include rule) from the existing `audrey.wiki` Access app rather than typing the email. Put the new app's AUD tag in the private config.
 2. **MCP or OAuth endpoints:** these need a separate Access bypass app. Session safety checks block creating bypass rules, so give Audrey the exact hostnames and paths to add in the dashboard (Zero Trust → Access → Applications).
 3. **Custom domain:** `cf deploy` attaches the hostnames in `domains` and creates the DNS record. Don't add DNS records by hand unless the deploy fails to.
 
@@ -78,7 +78,11 @@ In `tooolip/monitor`, add a line to `DEFAULT_TARGETS` in `lib/config.ts`:
 
 Update the "Cloudflare inventory was verified on" date in its README. Then run `npm run typecheck` and `node --test tests/health.test.ts`, and push a branch. The monitor deploys by hand with `npm run deploy`.
 
-## 6. Verify and report
+## 6. List it on the landing page
+
+Add the site to `landing/public/index.html` in this repo, under "On audrey.wiki", with a one-line description of what it does. Push it on a branch with the other changes.
+
+## 7. Verify and report
 
 - `curl -sI https://<name>.audrey.wiki/` should return 200 for a public site, or a redirect to the Access login for a private one. If this session's network blocks the host, say so instead of guessing.
 - Finish with a short list for Audrey:
