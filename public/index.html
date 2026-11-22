@@ -2,68 +2,63 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>audrey.wiki</title>
-	<link rel="stylesheet" href="/app.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<title>notes · audrey.rocks</title>
+	<meta name="theme-color" content="#111412">
+	<link rel="preload" href="/_dusk/fonts/space-mono-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="/_dusk/fonts/space-mono-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="stylesheet" href="/_dusk/dusk.css?v=2">
+	<link rel="stylesheet" href="/notes/app.css?v=2">
 	<link rel="icon" href="/favicon.svg">
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.0/lib/marked.umd.min.js" integrity="sha384-3oYgyohyKGID0Mjf4sv9mBRVGZQ7v30l8A1LknUrjwfSYZNT8rPZlBIuyXJWU2Xs" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.16/purify.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script src="/app.js" defer></script>
+	<script src="/notes/app.js?v=2" defer></script>
 </head>
-<body>
+<body class="notes">
 	<div class="app">
-		<aside id="sidebar" class="sidebar">
-			<header class="sidebar-head">
-				<a href="#/" class="brand">audrey.wiki</a>
-				<span class="actions">
-					<button id="new-note" class="icon" title="New note" aria-label="New note">
-						<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2.5h6.5L15.5 6.5V17a.5.5 0 0 1-.5.5H5a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 .5-.5Z"/><path d="M10 9v6M7 12h6"/></svg>
-					</button>
-					<button id="new-folder" class="icon" title="New folder" aria-label="New folder">
-						<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5a1 1 0 0 1 1-1h4l1.5 2h7.5a1 1 0 0 1 1 1V15a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1Z"/><path d="M10 9v5M7.5 11.5h5"/></svg>
-					</button>
-				</span>
-			</header>
-			<input id="search" class="search" type="search" placeholder="Search" autocomplete="off" spellcheck="false">
-			<nav id="tree" class="tree" aria-label="Notes"></nav>
+		<aside id="sidebar" class="sidebar" aria-label="Notes">
+			<p class="prompt"><a href="/" class="ps1">~/audrey.rocks</a><span class="ps1">/notes</span> $ <span class="cmd">ls</span></p>
+			<div class="side-actions">
+				<button id="new-note" class="btn" type="button"><span class="br">[ </span><span class="w">new note</span><span class="br"> ]</span></button>
+				<button id="new-folder" class="btn" type="button"><span class="br">[ </span><span class="w">folder</span><span class="br"> ]</span></button>
+			</div>
+			<label class="find"><span class="ps" aria-hidden="true">/</span><input id="search" type="search" placeholder="search" autocomplete="off" spellcheck="false" aria-label="Search notes"></label>
+			<nav id="tree" class="ntree" aria-label="Notes"></nav>
 			<ul id="results" class="results" hidden></ul>
+			<p class="side-foot"><a href="/notes/admin" id="admin-link" hidden>admin</a></p>
 		</aside>
 
 		<main id="main" class="main">
 			<header class="note-head">
-				<button id="toggle-sidebar" class="icon only-narrow" title="Notes" aria-label="Show notes">
-					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
-				</button>
+				<button id="toggle-sidebar" class="btn only-narrow" type="button" aria-label="Show notes"><span class="br">[ </span><span class="w">≡ notes</span><span class="br"> ]</span></button>
 				<div class="crumbs" id="crumbs"></div>
-				<span id="status" class="status" aria-live="polite"></span>
-				<div class="segmented" role="group" aria-label="View">
-					<button id="mode-edit" aria-pressed="true">Edit</button>
-					<button id="mode-read" aria-pressed="false">Read</button>
+				<span id="status" class="saved" aria-live="polite"></span>
+				<div class="modes" role="group" aria-label="View">
+					<button id="mode-edit" class="btn toggle" type="button" aria-pressed="true"><span class="br">[ </span><span class="w">edit</span><span class="br"> ]</span></button>
+					<button id="mode-read" class="btn toggle" type="button" aria-pressed="false"><span class="br">[ </span><span class="w">read</span><span class="br"> ]</span></button>
 				</div>
-				<button id="rename" class="icon" title="Rename or move" aria-label="Rename or move">
-					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3Z"/></svg>
-				</button>
-				<button id="delete" class="icon danger" title="Delete note" aria-label="Delete note">
-					<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2M5.5 6l1 10.5h7l1-10.5"/></svg>
-				</button>
+				<button id="rename" class="btn" type="button" title="Rename or move"><span class="br">[ </span><span class="w">rename</span><span class="br"> ]</span></button>
+				<button id="delete" class="btn danger" type="button" title="Delete note"><span class="br">[ </span><span class="w">delete</span><span class="br"> ]</span></button>
 			</header>
 
-			<div id="conflict" class="banner" hidden>
+			<div id="conflict" class="conflict" hidden>
 				<span>This note changed somewhere else while you were editing.</span>
-				<button id="conflict-reload">Load theirs</button>
-				<button id="conflict-keep" class="secondary">Keep mine</button>
+				<button id="conflict-reload" class="btn" type="button"><span class="br">[ </span><span class="w">load theirs</span><span class="br"> ]</span></button>
+				<button id="conflict-keep" class="btn" type="button"><span class="br">[ </span><span class="w">keep mine</span><span class="br"> ]</span></button>
 			</div>
 
-			<input id="title" class="title" spellcheck="false" aria-label="Note name">
-			<textarea id="editor" class="editor" spellcheck="true" placeholder="Start writing…"></textarea>
-			<article id="preview" class="preview" hidden></article>
+			<input id="title" class="note-title" spellcheck="false" aria-label="Note name">
+			<textarea id="editor" class="editor" spellcheck="true" placeholder="start writing…"></textarea>
+			<article id="preview" class="prose" hidden></article>
 
 			<section id="empty" class="empty" hidden>
-				<h1>Nothing open</h1>
-				<p>Pick a note on the left, or make a new one.</p>
-				<button id="empty-new" class="primary">New note</button>
+				<h1>nothing open</h1>
+				<p>Pick a note, or make a new one.</p>
+				<button id="empty-new" class="btn" type="button"><span class="br">[ </span><span class="w">new note</span><span class="br"> ]</span></button>
 			</section>
 		</main>
 	</div>
+
+	<div class="status" aria-hidden="true"><span class="mode" id="sb-mode">NORMAL</span><span class="here">~/notes</span><span class="prog" id="sb-path"></span><span id="sb-left"></span><span>utf-8</span></div>
 </body>
 </html>
