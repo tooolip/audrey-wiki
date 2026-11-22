@@ -1,6 +1,6 @@
 "use strict";
 
-// audrey.wiki: folders of markdown notes. Plain JS, no build step.
+// Notes at audrey.rocks/notes: folders of markdown notes. Plain JS, no build step.
 // Notes are addressed by path, like "Projects/Wiki ideas", and the page URL is
 // "#/Projects/Wiki%20ideas".
 
@@ -40,26 +40,6 @@ function el(tag, props = {}, ...children) {
 	return node;
 }
 
-function icon(d, cls) {
-	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-	svg.setAttribute("viewBox", "0 0 20 20");
-	if (cls) svg.setAttribute("class", cls);
-	svg.setAttribute("aria-hidden", "true");
-	for (const part of d.split("|")) {
-		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-		path.setAttribute("d", part);
-		svg.append(path);
-	}
-	return svg;
-}
-
-const ICONS = {
-	chev: "M8 5l5 5-5 5",
-	plus: "M10 4v12M4 10h12",
-	pencil: "M13.5 3.5l3 3L7 16H4v-3Z",
-	trash: "M4 6h12M8 6V4h4v2M5.5 6l1 10.5h7l1-10.5",
-};
-
 const nameOf = (path) => path.split("/").pop();
 const parentOf = (path) => path.split("/").slice(0, -1).join("/");
 const join = (folder, name) => (folder ? `${folder}/${name}` : name);
@@ -98,6 +78,24 @@ function setStatus(text) {
 	$("status").textContent = text;
 }
 
+// The status line at the bottom reads like an editor's: INSERT while editing,
+// READ in read mode, and the open note's path.
+function setModeLine() {
+	$("sb-mode").textContent = !state.current ? "NORMAL" : state.mode === "read" ? "READ" : "INSERT";
+	$("sb-path").textContent = state.current ? state.current.path : "";
+}
+
+// Basic accounts see how many saves are left today; the dev account gets the admin link.
+async function loadMe() {
+	try {
+		const me = await api("GET", "/notes/api/me");
+		$("admin-link").hidden = me.role !== "dev";
+		$("sb-left").textContent = me.writes_left === null ? "" : `${me.writes_left} saves left today`;
+	} catch {
+		/* only a nicety */
+	}
+}
+
 function fail(err) {
 	setStatus("");
 	alert(err.message);
@@ -106,7 +104,7 @@ function fail(err) {
 // Tree
 
 async function loadTree() {
-	const { folders, notes } = await api("GET", "/api/tree");
+	const { folders, notes } = await api("GET", "/notes/api/tree");
 	state.folders = folders;
 	state.notes = notes;
 	renderTree();
@@ -133,11 +131,14 @@ function rowTools(...buttons) {
 	return el("span", { class: "tools" }, ...buttons);
 }
 
-function toolButton(title, iconName, onclick) {
+const GLYPHS = { plus: "+", pencil: "✎", trash: "×" };
+
+function toolButton(title, glyph, onclick) {
 	return el(
 		"button",
 		{
-			class: "icon",
+			class: "glyph",
+			type: "button",
 			title,
 			"aria-label": title,
 			onclick: (e) => {
@@ -146,7 +147,7 @@ function toolButton(title, iconName, onclick) {
 				onclick();
 			},
 		},
-		icon(ICONS[iconName]),
+		GLYPHS[glyph],
 	);
 }
 
@@ -194,8 +195,8 @@ function renderFolder(node) {
 					}
 				},
 			},
-			icon(ICONS.chev, "chev"),
-			el("span", { class: "name" }, nameOf(f.path)),
+			el("span", { class: "chev", "aria-hidden": "true" }),
+			el("span", { class: "name" }, nameOf(f.path) + "/"),
 			rowTools(
 				toolButton("New note here", "plus", () => newNote(f.path)),
 				toolButton("Rename or move", "pencil", () => renamePrompt(f.path)),
@@ -317,12 +318,13 @@ function renderPreview() {
 function showEmpty() {
 	state.current = null;
 	state.dirty = false;
-	document.title = "audrey.wiki";
+	document.title = "notes · audrey.rocks";
 	for (const id of ["title", "editor", "preview", "conflict"]) $(id).hidden = true;
 	for (const id of ["rename", "delete"]) $(id).hidden = true;
 	$("crumbs").replaceChildren();
 	$("empty").hidden = false;
 	setStatus("");
+	setModeLine();
 	renderTree();
 }
 
@@ -330,6 +332,7 @@ function applyMode() {
 	const reading = state.mode === "read";
 	$("mode-edit").setAttribute("aria-pressed", String(!reading));
 	$("mode-read").setAttribute("aria-pressed", String(reading));
+	setModeLine();
 	if (!state.current) return;
 	$("editor").hidden = reading;
 	$("preview").hidden = !reading;
@@ -347,7 +350,7 @@ function showNote(note) {
 	state.current = { path: note.path, version: note.version, saved: note.content };
 	state.dirty = false;
 	state.conflict = false;
-	document.title = `${nameOf(note.path)} · audrey.wiki`;
+	document.title = `${nameOf(note.path)} · notes`;
 	$("empty").hidden = true;
 	$("conflict").hidden = true;
 	for (const id of ["title", "rename", "delete"]) $(id).hidden = false;
@@ -364,7 +367,7 @@ async function openPath(path) {
 	await flushSave();
 	if (!path) return showEmpty();
 	try {
-		showNote(await api("GET", "/api/note?path=" + encodeURIComponent(path)));
+		showNote(await api("GET", "/notes/api/note?path=" + encodeURIComponent(path)));
 	} catch (err) {
 		if (err.status === 400) {
 			setStatus("");
@@ -396,13 +399,14 @@ async function save() {
 	const content = $("editor").value;
 	state.dirty = false;
 	setStatus("Saving…");
-	state.saving = api("PUT", "/api/note", { path: note.path, content, if_version: note.version })
+	state.saving = api("PUT", "/notes/api/note", { path: note.path, content, if_version: note.version })
 		.then((saved) => {
 			note.version = saved.version;
 			note.saved = content;
 			const meta = state.notes.find((n) => n.path === note.path);
 			if (meta) Object.assign(meta, { version: saved.version, size: saved.size, updated_at: saved.updated_at });
 			if (!state.dirty) setStatus("Saved");
+			loadMe();
 		})
 		.catch((err) => {
 			state.dirty = true;
@@ -428,7 +432,7 @@ async function flushSave() {
 
 async function resolveConflict(keepMine) {
 	const note = state.current;
-	const latest = await api("GET", "/api/note?path=" + encodeURIComponent(note.path));
+	const latest = await api("GET", "/notes/api/note?path=" + encodeURIComponent(note.path));
 	state.conflict = false;
 	$("conflict").hidden = true;
 	if (keepMine) {
@@ -448,7 +452,7 @@ async function refresh() {
 	if (!note || state.dirty || state.saving || state.conflict) return;
 	const meta = state.notes.find((n) => n.path === note.path);
 	if (meta && meta.version !== note.version) {
-		const latest = await api("GET", "/api/note?path=" + encodeURIComponent(note.path)).catch(() => null);
+		const latest = await api("GET", "/notes/api/note?path=" + encodeURIComponent(note.path)).catch(() => null);
 		if (latest && !state.dirty) {
 			const pos = $("editor").selectionStart;
 			showNote(latest);
@@ -469,7 +473,7 @@ async function newNote(folder = currentFolder()) {
 	const path = join(folder, name.trim().replace(/^\/+|\/+$/g, ""));
 	if (!state.notes.some((n) => n.path === path)) {
 		try {
-			await api("PUT", "/api/note", { path, content: "" });
+			await api("PUT", "/notes/api/note", { path, content: "" });
 			await loadTree();
 		} catch (err) {
 			return fail(err);
@@ -484,7 +488,7 @@ async function newFolder(parent = currentFolder()) {
 	if (!name?.trim()) return;
 	const path = join(parent, name.trim().replace(/^\/+|\/+$/g, ""));
 	try {
-		await api("POST", "/api/folder", { path });
+		await api("POST", "/notes/api/folder", { path });
 		state.open.add(path);
 		revealInTree(path);
 		store("open", JSON.stringify([...state.open]));
@@ -498,7 +502,7 @@ async function moveTo(from, to) {
 	if (!to || to === from) return;
 	await flushSave();
 	try {
-		const moved = await api("POST", "/api/move", { from, to });
+		const moved = await api("POST", "/notes/api/move", { from, to });
 		// Keep folders open under their new names.
 		for (const p of [...state.open]) {
 			if (p === from || p.startsWith(from + "/")) {
@@ -529,7 +533,7 @@ async function deletePath(path, isFolder) {
 	const what = isFolder ? `the folder "${path}" and everything in it` : `"${path}"`;
 	if (!confirm(`Delete ${what}? This can't be undone.`)) return;
 	try {
-		await api("POST", "/api/delete", { path, recursive: isFolder });
+		await api("POST", "/notes/api/delete", { path, recursive: isFolder });
 		if (state.current && (state.current.path === path || state.current.path.startsWith(path + "/"))) {
 			state.dirty = false;
 			state.current = null;
@@ -573,7 +577,7 @@ async function runSearch() {
 	}
 	const words = q.toLowerCase().split(/\s+/);
 	try {
-		const { results } = await api("GET", "/api/search?q=" + encodeURIComponent(q));
+		const { results } = await api("GET", "/notes/api/search?q=" + encodeURIComponent(q));
 		if (q !== $("search").value.trim()) return;
 		$("results").replaceChildren(
 			...(results.length
@@ -683,7 +687,7 @@ $("preview").addEventListener("click", async (e) => {
 		.join("/");
 	if (!confirm(`Create "${target}"?`)) return;
 	try {
-		await api("PUT", "/api/note", { path: target, content: "" });
+		await api("PUT", "/notes/api/note", { path: target, content: "" });
 		await loadTree();
 		setMode("edit");
 		location.hash = hashFor(target);
@@ -699,6 +703,7 @@ window.addEventListener("beforeunload", (e) => {
 document.addEventListener("visibilitychange", refresh);
 window.addEventListener("focus", refresh);
 
+loadMe();
 loadTree()
 	.then(() => openPath(pathFromHash()))
 	.catch(fail);

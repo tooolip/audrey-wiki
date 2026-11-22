@@ -46,9 +46,9 @@ function formatNote(note: notes.Note, lines?: { offset?: number; limit?: number 
 
 const path = z.string().describe('Slash-separated, like "Projects/Wiki ideas". No file extension.');
 
-export function createServer(env: Env) {
+export function createServer(s: notes.Scope) {
 	const server = new McpServer(
-		{ name: "audrey.wiki", version: "1.0.0" },
+		{ name: "audrey.rocks notes", version: "1.0.0" },
 		{
 			instructions:
 				"Private notes: folders of markdown notes, addressed by path like \"Projects/Wiki ideas\" (no .md). " +
@@ -72,7 +72,7 @@ export function createServer(env: Env) {
 			annotations: { readOnlyHint: true },
 		},
 		tool(async (args) => {
-			const { folder, folders, notes: found } = await notes.list(env, args);
+			const { folder, folders, notes: found } = await notes.list(s, args);
 			const lines = [
 				...folders.map((f) => `${f}/`),
 				...found.map((n) => `${n.path}  ${kb(n.size)}  ${n.updated_at.slice(0, 16)}`),
@@ -96,7 +96,7 @@ export function createServer(env: Env) {
 			annotations: { readOnlyHint: true },
 		},
 		tool(async ({ paths, offset, limit }) => {
-			const found = await notes.readMany(env, paths);
+			const found = await notes.readMany(s, paths);
 			return text(
 				found.map((n) => ("error" in n ? `--- ${n.path}\n(${n.error})` : formatNote(n, { offset, limit }))).join("\n\n"),
 			);
@@ -118,7 +118,7 @@ export function createServer(env: Env) {
 			annotations: { readOnlyHint: true },
 		},
 		tool(async (args) => {
-			const results = await notes.search(env, args);
+			const results = await notes.search(s, args);
 			if (!results.length) return text("No matches.");
 			return text(
 				results
@@ -142,7 +142,7 @@ export function createServer(env: Env) {
 				if_version: z.number().int().optional(),
 			}),
 		},
-		tool(async (args) => json(await notes.write(env, args))),
+		tool(async (args) => json(await notes.write(s, args))),
 	);
 
 	server.registerTool(
@@ -158,7 +158,7 @@ export function createServer(env: Env) {
 				replace_all: z.boolean().default(false),
 			}),
 		},
-		tool(async (args) => json(await notes.edit(env, args))),
+		tool(async (args) => json(await notes.edit(s, args))),
 	);
 
 	server.registerTool(
@@ -169,7 +169,7 @@ export function createServer(env: Env) {
 			inputSchema: z.object({ from: z.string(), to: z.string() }),
 			annotations: { destructiveHint: false },
 		},
-		tool(async (args) => json(await notes.move(env, args))),
+		tool(async (args) => json(await notes.move(s, args))),
 	);
 
 	server.registerTool(
@@ -178,7 +178,7 @@ export function createServer(env: Env) {
 			description: "Create an empty folder. You don't need this before writing a note; write creates folders.",
 			inputSchema: z.object({ path: z.string() }),
 		},
-		tool(async ({ path }) => json(await notes.createFolder(env, path))),
+		tool(async ({ path }) => json(await notes.createFolder(s, path))),
 	);
 
 	server.registerTool(
@@ -189,7 +189,7 @@ export function createServer(env: Env) {
 			inputSchema: z.object({ path: z.string(), recursive: z.boolean().default(false) }),
 			annotations: { destructiveHint: true },
 		},
-		tool(async (args) => json(await notes.remove(env, args))),
+		tool(async (args) => json(await notes.remove(s, args))),
 	);
 
 	return server;

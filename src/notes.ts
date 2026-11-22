@@ -1,9 +1,14 @@
 // Notes are markdown addressed by path, like "Projects/Wiki ideas". A folder is
 // any path prefix, plus the rows in `folders` so empty ones stick around.
-// There are only ever a few thousand notes, so loading every path when a move
-// or delete needs the whole picture is fine.
+// Each person has their own notes: every query is scoped to one owner (a user
+// id from the shared audrey-rocks users table; the dev account is 'owner').
+// An owner only ever has a few thousand notes, so loading every path when a
+// move or delete needs the whole picture is fine.
 
 export const MAX_NOTE = 500_000;
+
+// One person's notes. caps limit how much a basic account can keep; dev has none.
+export type Scope = { db: D1Database; owner: string; caps?: { notes: number; bytes: number; note: number } };
 const MAX_SEGMENT = 120;
 
 // Bad input from a caller. The message is safe to show them.
@@ -43,14 +48,14 @@ function isInside(path: string, folder: string) {
 	return path.startsWith(folder + "/");
 }
 
-function addFolders(env: Env, paths: string[]) {
-	return paths.map((p) => env.DB.prepare("INSERT OR IGNORE INTO folders (path) VALUES (?)").bind(p));
+function addFolders(s: Scope, paths: string[]) {
+	return paths.map((p) => s.db.prepare("INSERT OR IGNORE INTO folders (owner, path) VALUES (?, ?)").bind(s.owner, p));
 }
 
-async function allPaths(env: Env) {
-	const [notes, folders] = await env.DB.batch<{ path: string }>([
-		env.DB.prepare("SELECT path FROM notes"),
-		env.DB.prepare("SELECT path FROM folders"),
+async function allPaths(s: Scope) {
+	const [notes, folders] = await s.db.batch<{ path: string }>([
+		s.db.prepare("SELECT path FROM notes WHERE owner = ?").bind(s.owner),
+		s.db.prepare("SELECT path FROM folders WHERE owner = ?").bind(s.owner),
 	]);
 	const noteSet = new Set(notes.results.map((r) => r.path));
 	const folderSet = new Set(folders.results.map((r) => r.path));
@@ -58,16 +63,16 @@ async function allPaths(env: Env) {
 	return { notes: noteSet, folders: folderSet };
 }
 
-export async function list(env: Env, args: { folder?: string; recursive?: boolean } = {}) {
+export async function list(s: Scope, args: { folder?: string; recursive?: boolean } = {}) {
 	const folder = args.folder ? normalizePath(args.folder) : "";
 	const recursive = args.recursive ?? true;
-	const where = folder ? "WHERE path LIKE ? ESCAPE '\\'" : "";
-	const binds = folder ? [inside(folder)] : [];
-	const [notes, folders] = await env.DB.batch([
-		env.DB.prepare(
+	const where = folder ? "WHERE owner = ? AND path LIKE ? ESCAPE '\\'" : "WHERE owner = ?";
+	const binds = folder ? [s.owner, inside(folder)] : [s.owner];
+	const [notes, folders] = await s.db.batch([
+		s.db.prepare(
 			`SELECT path, length(content) AS size, version, updated_at FROM notes ${where} ORDER BY path COLLATE NOCASE`,
 		).bind(...binds),
-		env.DB.prepare(`SELECT path FROM folders ${where}`).bind(...binds),
+		s.db.prepare(`SELECT path FROM folders ${where}`).bind(...binds),
 	]);
 	const depth = folder ? folder.split("/").length + 1 : 1;
 	const shallow = (p: string) => recursive || p.split("/").length === depth;
@@ -82,27 +87,27 @@ export async function list(env: Env, args: { folder?: string; recursive?: boolea
 	};
 }
 
-export async function read(env: Env, path: string) {
+export async function read(s: Scope, path: string) {
 	path = normalizePath(path);
-	const note = await env.DB.prepare(
-		"SELECT path, content, length(content) AS size, version, created_at, updated_at FROM notes WHERE path = ?",
+	const note = await s.db.prepare(
+		"SELECT path, content, length(content) AS size, version, created_at, updated_at FROM notes WHERE owner = ? AND path = ?",
 	)
-		.bind(path)
+		.bind(s.owner, path)
 		.first<Note>();
 	if (!note) throw new UserError(`No note at ${path}.`);
 	return note;
 }
 
-export async function readMany(env: Env, paths: string[]) {
+export async function readMany(s: Scope, paths: string[]) {
 	const found = new Map<string, Note>();
 	const normalized = paths.map(normalizePath);
 	// D1 caps bound parameters per query, so go in chunks.
 	for (let i = 0; i < normalized.length; i += 50) {
 		const chunk = normalized.slice(i, i + 50);
-		const { results } = await env.DB.prepare(
-			`SELECT path, content, length(content) AS size, version, created_at, updated_at FROM notes WHERE path IN (${chunk.map(() => "?").join(",")})`,
+		const { results } = await s.db.prepare(
+			`SELECT path, content, length(content) AS size, version, created_at, updated_at FROM notes WHERE owner = ? AND path IN (${chunk.map(() => "?").join(",")})`,
 		)
-			.bind(...chunk)
+			.bind(s.owner, ...chunk)
 			.all<Note>();
 		for (const n of results) found.set(n.path, n);
 	}
@@ -114,7 +119,7 @@ export type WriteMode = "replace" | "append" | "prepend";
 // Creates the note (and its folders) or updates it. With if_version, the write
 // only happens if nobody changed the note since that version.
 export async function write(
-	env: Env,
+	s: Scope,
 	args: { path: string; content: string; mode?: WriteMode; if_version?: number },
 ) {
 	const path = normalizePath(args.path);
@@ -126,14 +131,14 @@ export async function write(
 				? "CASE WHEN notes.content = '' THEN excluded.content ELSE excluded.content || char(10) || notes.content END"
 				: "excluded.content";
 	const guard = args.if_version === undefined ? "" : "WHERE notes.version = ?";
-	const upsert = env.DB.prepare(
-		`INSERT INTO notes (path, content) VALUES (?, ?)
-		ON CONFLICT (path) DO UPDATE SET content = ${merged}, version = notes.version + 1, updated_at = ${now} ${guard}
+	const upsert = s.db.prepare(
+		`INSERT INTO notes (owner, path, content) VALUES (?, ?, ?)
+		ON CONFLICT (owner, path) DO UPDATE SET content = ${merged}, version = notes.version + 1, updated_at = ${now} ${guard}
 		RETURNING version, length(content) AS size, updated_at`,
-	).bind(path, args.content, ...(args.if_version === undefined ? [] : [args.if_version]));
+	).bind(s.owner, path, args.content, ...(args.if_version === undefined ? [] : [args.if_version]));
 
-	const current = await env.DB.prepare("SELECT version, length(content) AS size FROM notes WHERE path = ?")
-		.bind(path)
+	const current = await s.db.prepare("SELECT version, length(content) AS size FROM notes WHERE owner = ? AND path = ?")
+		.bind(s.owner, path)
 		.first<{ version: number; size: number }>();
 	if (args.if_version !== undefined) {
 		if (!current) throw new UserError(`No note at ${path}. Leave out if_version to create it.`);
@@ -144,9 +149,11 @@ export async function write(
 		}
 	}
 	const size = mode === "replace" || !current ? args.content.length : current.size + 1 + args.content.length;
-	if (size > MAX_NOTE) throw new UserError(`Notes are capped at ${MAX_NOTE} characters.`);
+	const maxNote = s.caps ? Math.min(s.caps.note, MAX_NOTE) : MAX_NOTE;
+	if (size > maxNote) throw new UserError(`Notes are capped at ${maxNote.toLocaleString("en-US")} characters.`);
+	if (s.caps) await checkCaps(s, current ? 0 : 1, size - (current?.size ?? 0));
 
-	const results = await env.DB.batch([...addFolders(env, parentsOf(path)), upsert]);
+	const results = await s.db.batch([...addFolders(s, parentsOf(path)), upsert]);
 	const row = results.at(-1)!.results[0] as
 		| { version: number; size: number; updated_at: string }
 		| undefined;
@@ -158,11 +165,11 @@ export async function write(
 // Swaps exact text, like a find-and-replace. Cheaper for agents than sending
 // back a whole note to change a line.
 export async function edit(
-	env: Env,
+	s: Scope,
 	args: { path: string; old_text: string; new_text: string; replace_all?: boolean },
 ) {
 	if (!args.old_text) throw new UserError("old_text is empty.");
-	const note = await read(env, args.path);
+	const note = await read(s, args.path);
 	const count = note.content.split(args.old_text).length - 1;
 	if (count === 0) throw new UserError(`old_text wasn't found in ${note.path}.`);
 	if (count > 1 && !args.replace_all) {
@@ -173,23 +180,23 @@ export async function edit(
 	const content = args.replace_all
 		? note.content.split(args.old_text).join(args.new_text)
 		: note.content.replace(args.old_text, () => args.new_text);
-	const saved = await write(env, { path: note.path, content, if_version: note.version });
+	const saved = await write(s, { path: note.path, content, if_version: note.version });
 	return { ...saved, replaced: args.replace_all ? count : 1 };
 }
 
-export async function createFolder(env: Env, path: string) {
+export async function createFolder(s: Scope, path: string) {
 	path = normalizePath(path);
-	await env.DB.batch(addFolders(env, [...parentsOf(path), path]));
+	await s.db.batch(addFolders(s, [...parentsOf(path), path]));
 	return { folder: path };
 }
 
 // Moves or renames a note, a folder (with everything in it), or both if a note
 // and a folder share the path.
-export async function move(env: Env, args: { from: string; to: string }) {
+export async function move(s: Scope, args: { from: string; to: string }) {
 	const from = normalizePath(args.from);
 	const to = normalizePath(args.to);
 	if (from === to) return { from, to, moved: 0 };
-	const { notes, folders } = await allPaths(env);
+	const { notes, folders } = await allPaths(s);
 	const isNote = notes.has(from);
 	const isFolder = folders.has(from);
 	if (!isNote && !isFolder) throw new UserError(`Nothing at ${from}.`);
@@ -203,30 +210,30 @@ export async function move(env: Env, args: { from: string; to: string }) {
 	}
 
 	const statements = [
-		...addFolders(env, parentsOf(to)),
-		env.DB.prepare(`UPDATE notes SET path = ?, updated_at = ${now} WHERE path = ?`).bind(to, from),
+		...addFolders(s, parentsOf(to)),
+		s.db.prepare(`UPDATE notes SET path = ?, updated_at = ${now} WHERE owner = ? AND path = ?`).bind(to, s.owner, from),
 	];
 	if (isFolder) {
 		statements.push(
-			...addFolders(env, [to]),
-			env.DB.prepare(
-				`UPDATE notes SET path = ? || substr(path, ?), updated_at = ${now} WHERE path LIKE ? ESCAPE '\\'`,
-			).bind(to, from.length + 1, inside(from)),
-			env.DB.prepare(
-				"INSERT OR IGNORE INTO folders (path) SELECT ? || substr(path, ?) FROM folders WHERE path LIKE ? ESCAPE '\\'",
-			).bind(to, from.length + 1, inside(from)),
-			env.DB.prepare("DELETE FROM folders WHERE path = ? OR path LIKE ? ESCAPE '\\'").bind(from, inside(from)),
+			...addFolders(s, [to]),
+			s.db.prepare(
+				`UPDATE notes SET path = ? || substr(path, ?), updated_at = ${now} WHERE owner = ? AND path LIKE ? ESCAPE '\\'`,
+			).bind(to, from.length + 1, s.owner, inside(from)),
+			s.db.prepare(
+				"INSERT OR IGNORE INTO folders (owner, path) SELECT owner, ? || substr(path, ?) FROM folders WHERE owner = ? AND path LIKE ? ESCAPE '\\'",
+			).bind(to, from.length + 1, s.owner, inside(from)),
+			s.db.prepare("DELETE FROM folders WHERE owner = ? AND (path = ? OR path LIKE ? ESCAPE '\\')").bind(s.owner, from, inside(from)),
 		);
 	}
-	await env.DB.batch(statements);
+	await s.db.batch(statements);
 	return { from, to, moved: movingNotes.length };
 }
 
 // Deletes a note, a folder, or both if they share the path. A folder with
 // anything in it needs recursive.
-export async function remove(env: Env, args: { path: string; recursive?: boolean }) {
+export async function remove(s: Scope, args: { path: string; recursive?: boolean }) {
 	const path = normalizePath(args.path);
-	const { notes, folders } = await allPaths(env);
+	const { notes, folders } = await allPaths(s);
 	const isNote = notes.has(path);
 	const isFolder = folders.has(path);
 	if (!isNote && !isFolder) throw new UserError(`Nothing at ${path}.`);
@@ -237,12 +244,14 @@ export async function remove(env: Env, args: { path: string; recursive?: boolean
 			`${path} has ${contents} note(s) and ${subfolders} folder(s) inside it. Pass recursive to delete them too.`,
 		);
 	}
-	await env.DB.batch([
-		env.DB.prepare("DELETE FROM notes WHERE path = ? OR path LIKE ? ESCAPE '\\'").bind(
+	await s.db.batch([
+		s.db.prepare("DELETE FROM notes WHERE owner = ? AND (path = ? OR path LIKE ? ESCAPE '\\')").bind(
+			s.owner,
 			isNote ? path : "",
 			isFolder ? inside(path) : "",
 		),
-		env.DB.prepare("DELETE FROM folders WHERE path = ? OR path LIKE ? ESCAPE '\\'").bind(
+		s.db.prepare("DELETE FROM folders WHERE owner = ? AND (path = ? OR path LIKE ? ESCAPE '\\')").bind(
+			s.owner,
 			isFolder ? path : "",
 			isFolder ? inside(path) : "",
 		),
@@ -253,18 +262,18 @@ export async function remove(env: Env, args: { path: string; recursive?: boolean
 // Every word (or "quoted phrase") has to appear somewhere in the note's path or
 // text. Returns the matching lines so a caller can tell which notes are worth
 // reading in full.
-export async function search(env: Env, args: { query: string; folder?: string; limit?: number }) {
+export async function search(s: Scope, args: { query: string; folder?: string; limit?: number }) {
 	const words = [...args.query.toLowerCase().matchAll(/"([^"]+)"|(\S+)/g)]
 		.map((m) => m[1] ?? m[2])
 		.filter(Boolean);
 	if (!words.length) throw new UserError("Search query is empty.");
 	const folder = args.folder ? normalizePath(args.folder) : "";
-	const conditions = words.map(() => "(instr(lower(content), ?) > 0 OR instr(lower(path), ?) > 0)");
+	const conditions = ["owner = ?", ...words.map(() => "(instr(lower(content), ?) > 0 OR instr(lower(path), ?) > 0)")];
 	if (folder) conditions.push("path LIKE ? ESCAPE '\\'");
-	const { results } = await env.DB.prepare(
+	const { results } = await s.db.prepare(
 		`SELECT path, content, updated_at FROM notes WHERE ${conditions.join(" AND ")} ORDER BY updated_at DESC LIMIT ?`,
 	)
-		.bind(...words.flatMap((w) => [w, w]), ...(folder ? [inside(folder)] : []), args.limit ?? 20)
+		.bind(s.owner, ...words.flatMap((w) => [w, w]), ...(folder ? [inside(folder)] : []), args.limit ?? 20)
 		.all<{ path: string; content: string; updated_at: string }>();
 	return results.map((n) => {
 		const lines = n.content.split("\n");
@@ -277,4 +286,28 @@ export async function search(env: Env, args: { query: string; folder?: string; l
 		}
 		return { path: n.path, updated_at: n.updated_at, matches };
 	});
+}
+
+// A basic account's note count and total size. Called before a write that adds
+// `notes` notes and changes the total by `bytes`.
+async function checkCaps(s: Scope, notes: number, bytes: number) {
+	if (!s.caps) return;
+	const row = await s.db
+		.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(length(content)), 0) AS size FROM notes WHERE owner = ?")
+		.bind(s.owner)
+		.first<{ n: number; size: number }>();
+	if (notes && (row?.n ?? 0) + notes > s.caps.notes) {
+		throw new UserError(`Accounts can keep up to ${s.caps.notes} notes. Delete some to make room.`);
+	}
+	if (bytes > 0 && (row?.size ?? 0) + bytes > s.caps.bytes) {
+		throw new UserError(`Accounts can keep up to ${(s.caps.bytes / 1_000_000).toFixed(0)} MB of notes. Delete some to make room.`);
+	}
+}
+
+// Everything one owner has, for deleting an account.
+export async function removeOwner(db: D1Database, owner: string) {
+	await db.batch([
+		db.prepare("DELETE FROM notes WHERE owner = ?").bind(owner),
+		db.prepare("DELETE FROM folders WHERE owner = ?").bind(owner),
+	]);
 }

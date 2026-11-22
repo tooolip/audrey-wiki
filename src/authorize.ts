@@ -1,8 +1,10 @@
 import { AuthorizationError, CimdFetchError, type ConsentDescription } from "@cloudflare/workers-oauth-provider";
+import type { User } from "./rocks-users";
 
 // /authorize is where an MCP client (Claude Code, claude.ai) asks for a token.
-// Access has already signed the owner in by the time this runs, so all that's
-// left is asking whether this app may use the notes.
+// Access has already signed the person in by the time this runs, so all that's
+// left is asking whether this app may use their notes. Agents are dev-only for
+// now: OAuth tokens live in KV, and the free plan allows 1,000 KV writes a day.
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
@@ -12,7 +14,8 @@ function page(title: string, body: string) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${title}</title>
-<link rel="stylesheet" href="/app.css">
+<link rel="stylesheet" href="/_dusk/dusk.css?v=2">
+<link rel="stylesheet" href="/notes/app.css?v=2">
 <main class="consent">${body}</main>
 </html>`;
 }
@@ -46,8 +49,9 @@ function problem(message: string) {
 	});
 }
 
-export async function authorize(request: Request, env: Env, owner: string) {
+export async function authorize(request: Request, env: Env, user: User) {
 	const oauth = env.OAUTH_PROVIDER;
+	if (user.role !== "dev") return problem("Connecting agents isn't open to everyone yet. You can still use your notes in the browser.");
 	try {
 		if (request.method === "GET") {
 			const authRequest = await oauth.parseAuthRequest(request);
@@ -66,10 +70,10 @@ export async function authorize(request: Request, env: Env, owner: string) {
 			const approved = await oauth.approveConsent(request, handle);
 			const { redirectTo } = await oauth.completeAuthorization({
 				request: approved.request,
-				userId: owner,
+				userId: user.id,
 				metadata: {},
 				scope: approved.request.scope,
-				props: { email: owner },
+				props: { userId: user.id, email: user.email },
 			});
 			approved.headers.set("Location", redirectTo);
 			return new Response(null, { status: 302, headers: approved.headers });
