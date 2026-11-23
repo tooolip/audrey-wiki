@@ -8,15 +8,28 @@ import type { User } from "./rocks-users";
 
 const escape = (value: string) => value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const SECURITY = {
+	"Content-Security-Policy": "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+	"X-Content-Type-Options": "nosniff",
+	"Referrer-Policy": "no-referrer",
+	"Cache-Control": "no-store",
+};
+
 function page(title: string, body: string) {
 	return `<!doctype html>
 <html lang="en">
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title}</title>
-<link rel="stylesheet" href="/_dusk/dusk.css?v=2">
-<link rel="stylesheet" href="/notes/app.css?v=2">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#f6f3ec">
+	<title>${title} · audrey.rocks</title>
+	<link rel="stylesheet" href="/_theme/theme.css?v=1">
+	<link rel="stylesheet" href="/notes/app.css?v=3">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
 <main class="consent">${body}</main>
+</body>
 </html>`;
 }
 
@@ -36,8 +49,8 @@ ${local}
 <p>It will be able to read, write, move and delete notes.</p>
 <form method="post">
 	<input type="hidden" name="handle" value="${escape(handle)}">
-	<button name="decision" value="approve">Allow</button>
-	<button name="decision" value="deny" class="secondary">Deny</button>
+	<button class="btn accent" name="decision" value="approve">Allow</button>
+	<button class="btn" name="decision" value="deny">Deny</button>
 </form>`,
 	);
 }
@@ -45,7 +58,7 @@ ${local}
 function problem(message: string) {
 	return new Response(page("Couldn't connect", `<h1>Couldn't connect</h1><p>${escape(message)}</p>`), {
 		status: 400,
-		headers: { "Content-Type": "text/html; charset=utf-8" },
+		headers: { "Content-Type": "text/html; charset=utf-8", ...SECURITY },
 	});
 }
 
@@ -58,6 +71,7 @@ export async function authorize(request: Request, env: Env, user: User) {
 			const details = await oauth.describeConsent(authRequest);
 			const consent = await oauth.beginConsent(authRequest);
 			consent.headers.set("Content-Type", "text/html; charset=utf-8");
+			for (const [k, v] of Object.entries(SECURITY)) consent.headers.set(k, v);
 			return new Response(consentPage(details, consent.handle), { headers: consent.headers });
 		}
 		if (request.method === "POST") {

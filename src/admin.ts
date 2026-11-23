@@ -14,7 +14,7 @@ const ago = (t: number, now: number) => {
 type Row = { id: string; email: string; status: string; flags: string; created_at: number; last_seen: number };
 
 function button(action: string, id: string, label: string, cls = "") {
-	return `<form method="post" class="inline"><input type="hidden" name="action" value="${action}"><input type="hidden" name="id" value="${esc(id)}"><button class="btn ${cls}" type="submit"><span class="br">[ </span><span class="w">${label}</span><span class="br"> ]</span></button></form>`;
+	return `<form method="post" class="inline"><input type="hidden" name="action" value="${action}"><input type="hidden" name="id" value="${esc(id)}"><button class="btn ${cls}" type="submit">${label}</button></form>`;
 }
 
 async function render(env: Env, now: number) {
@@ -42,15 +42,15 @@ async function render(env: Env, now: number) {
 				u.id === "owner"
 					? ""
 					: [
-							u.status === "suspended" ? button("restore", u.id, "restore") : button("suspend", u.id, "suspend"),
-							button("delete", u.id, "delete", "danger"),
+							u.status === "suspended" ? button("restore", u.id, "Restore") : button("suspend", u.id, "Suspend"),
+							button("delete", u.id, "Delete", "danger"),
 						].join("");
 			return `<li class="${u.status === "suspended" ? "off" : ""}">
 	<span class="who">${esc(u.email)}</span>
-	<span class="dim">${role}${u.status === "suspended" ? ` · <span class="rust">suspended</span>` : ""}${u.flags ? ` · <span class="leaf">${esc(u.flags)}</span>` : ""}</span>
+	<span class="dim">${role}${u.status === "suspended" ? ` · <span class="berry">suspended</span>` : ""}${u.flags ? ` · <span class="ochre">${esc(u.flags)}</span>` : ""}</span>
 	<span class="dim">joined ${ago(u.created_at, now)} · seen ${ago(u.last_seen, now)} · ${n ? `${n.n} notes, ${(n.size / 1000).toFixed(0)} KB` : "no notes"}</span>
 	<span class="dim">${use.length ? `today/7d: ${esc(use.join(" · "))}` : "nothing used this week"}</span>
-	<span class="acts">${actions}</span>
+	${actions ? `<span class="acts">${actions}</span>` : ""}
 </li>`;
 		})
 		.join("\n");
@@ -60,29 +60,37 @@ async function render(env: Env, now: number) {
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="theme-color" content="#f6f3ec">
 	<title>accounts · audrey.rocks</title>
-	<link rel="stylesheet" href="/_dusk/dusk.css?v=2">
-	<link rel="stylesheet" href="/notes/app.css?v=2">
-	<link rel="icon" href="/favicon.svg">
+	<link rel="stylesheet" href="/_theme/theme.css?v=1">
+	<link rel="stylesheet" href="/notes/app.css?v=3">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body class="doc">
+<body>
 <div class="page">
-	<p class="prompt"><span class="ps1">~/audrey.rocks/notes</span> $ <span class="cmd">admin</span></p>
-	<main>
-		<section class="ch" aria-labelledby="accounts">
-			<h1 class="rule" id="accounts"><span class="n" aria-hidden="true">01</span><span class="fill" aria-hidden="true"></span><span class="t">accounts</span></h1>
-			<p class="meta">${users.results.length} accounts. New sign-ups are ${paused ? `<span class="rust">paused</span>` : "open"}.</p>
-			<div class="row">${paused ? button("resume_signups", "", "open sign-ups") : button("pause_signups", "", "pause sign-ups")}</div>
-			<ul class="tree accounts">
-				<li class="root" aria-hidden="true">users/</li>
+	<header class="topbar">
+		<div class="row">
+			<a class="brand" href="/"><span>Audrey Schickler</span></a>
+			<span class="crumb-sep" aria-hidden="true">/</span>
+			<a href="/notes/">notes</a>
+			<span class="crumb-sep" aria-hidden="true">/</span>
+			<span>admin</span>
+		</div>
+		<nav class="topbar-nav"><a href="/notes/">back to notes</a></nav>
+	</header>
+	<main class="admin-main">
+		<h1 class="page-title">Accounts</h1>
+		<p class="meta">${users.results.length} accounts · new sign-ups are ${paused ? `<span class="berry">paused</span>` : "open"}.</p>
+		<div class="row">${paused ? button("resume_signups", "", "Open sign-ups", "accent") : button("pause_signups", "", "Pause sign-ups")}</div>
+		<ul class="accounts">
 ${rows}
-			</ul>
-			<p class="meta">Daily cleanup: ${last ? `${ago(Number(last.updated_at), now)}, ${esc(String(last.value))}` : "hasn't run yet"}.</p>
-		</section>
-		<footer class="fin"><span class="eof">~ EOF <span class="blush">✿</span></span>
-			<nav class="row"><a class="btn" href="/notes/"><span class="br">[ </span><span class="w">notes</span><span class="br"> ]</span></a></nav>
-		</footer>
+		</ul>
+		<p class="meta">Daily cleanup: ${last ? `${ago(Number(last.updated_at), now)}, ${esc(String(last.value))}` : "hasn't run yet"}.</p>
 	</main>
+	<footer class="foot">
+		<span><span class="floret" aria-hidden="true">❀</span> notes admin</span>
+		<span class="foot-links"><a href="/notes/">notes</a><a href="/">audrey.rocks</a></span>
+	</footer>
 </div>
 </body>
 </html>`;
