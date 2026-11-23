@@ -55,13 +55,13 @@ for other people's notes too: maintaining the code never authorizes reading them
 
 ## audrey.rocks project rules
 
-Every audrey.rocks app repo carries this section word for word. Change it in `~/Code/audrey-rocks/CLAUDE.md` first, then copy it into the other repos.
+Every audrey.rocks app repo carries this section word for word. This file is the source: edit it here and run `bun run sync` in `~/Code/audrey-rocks` to propagate it.
 
-- audrey.rocks is one gateway Worker (`~/Code/audrey-rocks`) that serves the home page and forwards a path prefix to each app's Worker over a service binding. Apps have no hostname, `workers.dev` or preview URLs of their own. The home page lists every app and `~/Code/rocks-monitor` checks each one; update both when an app is added, renamed or retired.
-- Public apps (`/claude-blog`, `/monitor`) need no sign-in. Member apps (`/tools`, `/notes`) sit behind Cloudflare Access with Google. The gateway decides the role (dev or basic) and passes it on; an app with people's data also verifies the Access JWT itself.
-- Anything that costs Cloudflare usage per person counts against the daily limits in `rocks-users.ts`, and limits are sized to keep most of the free plan for dev.
-- Never put emails, Access audience tags or API tokens in source. Look them up with the Cloudflare API or keep them in ignored config and secrets.
-- Serve pages with a strict Content Security Policy, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. Loosen the CSP only for something the app actually uses.
-- Design follows the Hudson Dusk showcase (tooolip/hudson-dusk-design, `docs/index.html`), using the shared `/_dusk/dusk.css`.
-- Pin dependencies to exact versions. Work on a branch and run the typecheck before pushing.
+- audrey.rocks is one gateway Worker (`~/Code/audrey-rocks`) that serves the home page, `/_theme/`, and forwards a path prefix to each app's Worker over a service binding. Apps have no hostname, `workers.dev`, or preview URLs of their own. When adding, renaming, or retiring an app, update all four places: the app's `cloudflare.config.ts`, `audrey-rocks` (`cloudflare.config.ts`, `src/index.ts`, `public/index.html`), `rocks-monitor/src/collect.ts` (`TARGETS` and `WORKERS`), and `rocks-deploy/.github/workflows/deploy.yml`.
+- Public apps (`/claude-blog`, `/scenes`, `/monitor`) need no sign-in. Member apps (`/tools`, `/notes`) sit behind Cloudflare Access with Google; `/vault` is dev-only. The gateway decides the role (`dev`, `basic`, or `new`) and passes `x-rocks-*` headers; apps holding user data (`audrey-wiki`, `rocks-vault`) also verify the Access JWT themselves.
+- Anything that costs Cloudflare usage per person counts against the daily limits in `rocks-users.ts`, sized to reserve most of the free plan for dev.
+- Never put emails, Access audience tags, or API tokens in source. Look them up with the Cloudflare API or keep them in ignored config and secrets.
+- Serve pages with a strict Content Security Policy, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`. Loosen CSP only for resources the app actually uses.
+- Design follows the shared Scandinavian Romantic theme at `/_theme/theme.css` (and `/_theme/mark.svg`). Child stylesheets must only define layout using CSS custom properties—never hardcode colors, gradients, shadows, or `@font-face` rules.
+- Pin dependencies to exact versions. Work on a branch and run `check` or `typecheck` (plus `bun run sync-check` in `audrey-rocks`) before pushing.
 - People's data lives in the deployed databases, not the repo. Maintaining the code doesn't authorize reading or editing it.

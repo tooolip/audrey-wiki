@@ -62,7 +62,7 @@ async function render(env: Env, now: number) {
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 	<meta name="theme-color" content="#f6f3ec">
 	<title>accounts · audrey.rocks</title>
-	<link rel="stylesheet" href="/_theme/theme.css?v=1">
+	<link rel="stylesheet" href="/_theme/theme.css">
 	<link rel="stylesheet" href="/notes/app.css?v=3">
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>

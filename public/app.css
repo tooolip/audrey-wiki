@@ -84,7 +84,7 @@ body.notes { padding: 0; }
 .ntree .chev { display: none; }
 .ntree .folder:not(.open) > ul { display: none; }
 .ntree .folder:not(.open) > .row .name::after { content: " ·"; color: var(--muted); }
-.ntree .row:hover, .ntree .row:focus-visible { background: rgba(246, 243, 236, 0.72); color: var(--ink); }
+.ntree .row:hover, .ntree .row:focus-visible { background: var(--paper-soft); color: var(--ink); }
 .ntree .row.current { background: var(--paper); color: var(--ink); }
 .ntree .row.current .name::after { content: " ❀"; color: var(--blush); font-size: 11px; }
 .ntree .row.drop { background: var(--blush-soft); }
@@ -215,7 +215,7 @@ body.notes { padding: 0; }
 .prose p, .prose ul, .prose ol, .prose pre, .prose blockquote, .prose table { margin: 0 0 16px; }
 .prose ul, .prose ol { padding-left: 22px; }
 .prose li::marker { color: var(--blush); }
-.prose a { color: var(--fjord); text-decoration: underline; text-decoration-color: rgba(76, 103, 123, 0.35); text-underline-offset: 3px; }
+.prose a { color: var(--fjord); text-decoration: underline; text-decoration-color: var(--fjord-line); text-underline-offset: 3px; }
 .prose a.wikilink { color: var(--sage); text-decoration-style: dotted; }
 .prose a.wikilink.missing { color: var(--berry); }
 .prose code { font: 400 13.5px/1.5 var(--mono); color: var(--ink); background: var(--oat); padding: 2px 6px; border-radius: 5px; }

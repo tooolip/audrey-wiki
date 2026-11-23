@@ -14,7 +14,7 @@ const sharedTheme: Plugin = {
 	configureServer(server) {
 		server.middlewares.use(async (req, res, next) => {
 			const path = (req.url ?? "").split("?")[0];
-			if (!path.startsWith("/_dusk/") && path !== "/favicon.svg") return next();
+			if (!path.startsWith("/_theme/") && path !== "/favicon.svg" && path !== "/favicon.ico") return next();
 			const file = normalize(join(THEME, path));
 			if (!file.startsWith(THEME)) return next();
 			try {
