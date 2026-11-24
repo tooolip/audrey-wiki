@@ -1,11 +1,11 @@
 ---
-name: wiki-find
-description: "Find and answer questions from Audrey’s personal notes in audrey.wiki via MCP. Use when the user asks to recall, look up, search, or summarize information in the wiki; repository maintenance is separate."
+name: notes-find
+description: "Find and answer questions from Audrey’s personal notes in audrey.rocks/notes via MCP. Use when the user asks to recall, look up, search, or summarize information in their notes; repository maintenance is separate."
 ---
 
-# Find information in audrey.wiki
+# Find information in audrey.rocks/notes
 
-Use the `audrey-wiki` MCP connection at `https://audrey.rocks/notes/mcp`. Discover the
+Use the `rocks-notes` MCP connection at `https://audrey.rocks/notes/mcp`. Discover the
 available tools and use their actual schemas; the operation names below are the
 server's names, not guaranteed host-specific tool identifiers. If the connection
 is missing or signed out, explain the connection/login step and keep any draft in

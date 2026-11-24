@@ -7,7 +7,7 @@ import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 export default defineConfig({
 	accountId: deployment.accountId,
 	worker: {
-		name: "audrey-wiki",
+		name: "rocks-notes",
 		compatibilityDate: "2026-10-23",
 		compatibilityFlags: ["nodejs_compat"],
 		entrypoint,

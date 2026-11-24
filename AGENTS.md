@@ -1,4 +1,4 @@
-# audrey-wiki (notes at audrey.rocks/notes)
+# rocks-notes (notes at audrey.rocks/notes)
 
 Codex is the primary maintainer of this project. This file is the canonical repository guidance; CLAUDE.md just points here.
 
@@ -30,23 +30,23 @@ Uses the `cf` CLI (pinned in devDependencies) and `bun`. No Wrangler. `cf` needs
 - `bun install`, `bunx vite` (http://localhost:5195/notes/, with the shared theme served from `../audrey-rocks/public`), `bun run typecheck`
 - Local D1: `bunx cf d1 migrations apply <databaseId> --local --persist-to .cloudflare/state`, and the users DB with `--dir ../audrey-rocks/migrations`
 - Remote D1: same without `--local --persist-to …`
-- Deploys: pushing to `main` on GitHub (tooolip/audrey-wiki) type checks, applies migrations and runs `cf deploy` via `.github/workflows/deploy.yml`, using the `DEPLOYMENT_CONFIG_JSON` secret. `bunx cf deploy` from a laptop also works.
+- Deploys: pushing to `main` on GitHub (tooolip/rocks-notes) type checks, applies migrations and runs `cf deploy` via `.github/workflows/deploy.yml`, using the `DEPLOYMENT_CONFIG_JSON` secret. `bunx cf deploy` from a laptop also works.
 
 ## Personal notes skills
 
 The versioned skills in `skills/` interact with the deployed notes through the MCP
-server at `https://audrey.rocks/notes/mcp`, configured in Codex as `audrey-wiki`:
+server at `https://audrey.rocks/notes/mcp`, configured in Codex as `rocks-notes`:
 
-- `wiki-find`: find notes and answer questions from them.
-- `wiki-capture`: save new notes and update existing ones.
-- `wiki-organize`: organize folders, consolidate duplicates, and repair affected links.
+- `notes-find`: find notes and answer questions from them.
+- `notes-capture`: save new notes and update existing ones.
+- `notes-organize`: organize folders, consolidate duplicates, and repair affected links.
 
 Keep their tool guidance aligned with `src/mcp.ts` and `src/notes.ts` when changing
 the server. Local symlinks in `~/.codex/skills/` make them available outside this
 repository. Each skill declares its MCP dependency in `agents/openai.yaml`.
 On another machine, link these skill directories into the local skills directory,
-then run `codex mcp add audrey-wiki --url https://audrey.rocks/notes/mcp` and complete
-OAuth login (`codex mcp login audrey-wiki` if needed).
+then run `codex mcp add rocks-notes --url https://audrey.rocks/notes/mcp` and complete
+OAuth login (`codex mcp login rocks-notes` if needed).
 
 Personal note content belongs in the notes, not in this source repository. Use MCP
 for note work; direct D1 access is for explicitly requested maintenance. Creating
@@ -58,7 +58,7 @@ for other people's notes too: maintaining the code never authorizes reading them
 Every audrey.rocks app repo carries this section word for word. This file is the source: edit it here and run `bun run sync` in `~/Code/audrey-rocks` to propagate it.
 
 - audrey.rocks is one gateway Worker (`~/Code/audrey-rocks`) that serves the home page, `/_theme/`, and forwards a path prefix to each app's Worker over a service binding. Apps have no hostname, `workers.dev`, or preview URLs of their own. When adding, renaming, or retiring an app, update all four places: the app's `cloudflare.config.ts`, `audrey-rocks` (`cloudflare.config.ts`, `src/index.ts`, `public/index.html`), `rocks-monitor/src/collect.ts` (`TARGETS` and `WORKERS`), and `rocks-deploy/.github/workflows/deploy.yml`.
-- Public apps (`/claude-blog`, `/scenes`, `/monitor`) need no sign-in. Member apps (`/tools`, `/notes`) sit behind Cloudflare Access with Google; `/vault` is dev-only. The gateway decides the role (`dev`, `basic`, or `new`) and passes `x-rocks-*` headers; apps holding user data (`audrey-wiki`, `rocks-vault`) also verify the Access JWT themselves.
+- Public apps (`/claude-blog`, `/scenes`, `/monitor`) need no sign-in. Member apps (`/tools`, `/notes`) sit behind Cloudflare Access with Google; `/vault` is dev-only. The gateway decides the role (`dev`, `basic`, or `new`) and passes `x-rocks-*` headers; apps holding user data (`rocks-notes`, `rocks-vault`) also verify the Access JWT themselves.
 - Anything that costs Cloudflare usage per person counts against the daily limits in `rocks-users.ts`, sized to reserve most of the free plan for dev.
 - Never put emails, Access audience tags, or API tokens in source. Look them up with the Cloudflare API or keep them in ignored config and secrets.
 - Serve pages with a strict Content Security Policy, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`. Loosen CSP only for resources the app actually uses.
